@@ -1,5 +1,4 @@
 
-# .libPaths("/home/eric.sodja/.conda/envs/asfra_run/lib/R/library")
 #source targets file
 source("_targets.R")
 

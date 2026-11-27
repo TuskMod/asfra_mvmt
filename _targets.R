@@ -1,32 +1,15 @@
 
-# _targets.R
 
 ## replaces regen_contus.R adapted from Will's work with the feral swine movement estimates by watershed for that paper
-# Targets setup --------------------
-# setwd(this.path::this.dir())
 
 #load libraries for targets script
 library(targets)
-# library(tarchetypes)
-# library(data.table)
-# library(geotargets)
-# library(terra)
 library(crew)
 library(crew.cluster)
 
-# This hardcodes the absolute path in _targets.yaml, so to make this more
-# portable, we rewrite it every time this pipeline is run (and we don't track
-# _targets.yaml with git)
-# i.e. _targets.yaml is an optional file that sets defaults for tar_make() via
-# tar_config_get(), so with cluster hpc whatever computing these change the
-# default values to those that would be helpful for that...
 
 tar_config_set(
-#   store = here::here("_targets"),
-#   store = file.path(this.path::this.dir(),"_targets"),
   store = file.path("_targets"),
-#   script = here::here("_targets.R")
-#   script = file.path(this.path::this.dir(),"_targets.R")
   script = file.path("_targets.R")
 )
 
@@ -44,32 +27,7 @@ control_wide <- crew::crew_controller_local(
     name = 'wide_crew'
     , workers=4
 )
-# slurmy_try <- crew.cluster::crew_controller_slurm(
-#                                 name='slurmy',
-#                                 workers=2,
-# #                                 host=nanonext::ip_addr()['enp2s0f4u1u2c2'],
-#                                 options_cluster = crew_options_slurm(
-#                                         partition='scicomp-compute',
-#                                         command_submit = as.character(Sys.which("sbatch")),
-#                                         script_lines=c('#SBATCH --account=eric.sodja',
-#                                                        '#SBATCH --nodes=2',
-# #                                                            '#SBATCH --partition=scicomp-compute'
-#                                                        'conda activate contus_run',
-#                                                        'module load anaconda3',
-#                                                        'module load openssl',
-#                                                        'module load R',
-#                                                          'export RENV_CONFIG_PAK_ENABLED=TRUE'
-# #                                                        'module load gcc12/12.2.0'
-#                                                                         ),
-#                                         cpus_per_task=4,
-#                                         memory_gigabytes_per_cpu=4,
-#                                         log_error='./log/%A_%j.err',
-#                                         log_output='./log/%A_%j.out',
-#                                         verbose=TRUE,
-#                                         n_tasks=100,
-#                                         script_directory='./tryscript/'
-#                                     )
-#                                 )
+
 #Load packages
 tar_option_set(packages = c('sf','terra','data.table','gbm', 'daymetr','exactextractr','raster'),
                 ,error = 'stop' # for troubleshooting
@@ -78,18 +36,10 @@ tar_option_set(packages = c('sf','terra','data.table','gbm', 'daymetr','exactext
                ,garbage_collection=TRUE
                ,workspace_on_error=TRUE
                , memory='transient'
-#                , controller = crew_controller_group(control_tall, control_wide, slurmy_try)
                , controller = crew_controller_group(control_tall, control_duo, control_wide)
-#                , controller = crew_controller_group(slurmy_try)
                , resources= tar_resources(crew=tar_resources_crew(controller = 'tall_crew'))
-#                , resources= tar_resources(crew=tar_resources_crew(controller = 'duo_crew'))
-#                , resources= tar_resources(crew=tar_resources_crew(controller = 'wide_crew'))
-#                , controller = slurmy_try
-#                , resources= tar_resources(crew=tar_resources_crew(controller = 'slurmy'))
 )
 
-# Source functions in pipeline (could also be handled by tar_source(), in theory, but I can't get that to work...)
-# lapply(list.files(file.path("scripts"), full.names = TRUE, recursive = TRUE), source)
 tar_source('./scripts/')
 
 
@@ -191,16 +141,16 @@ list(
 
     ## testing predictions (i.e. testing against original outputs from pig range)
 
-    , tar_target(oldpreds, readRDS('../Pipeline_R3/watershed_weekly.rds'))
-#     , tar_target(oldpreds, readRDS('../Pipeline_R3/watershed_minimum_weekly.rds'))
-    , tar_target(olddat, getolddat(oldpreds))
-    , tar_target(pig.range, '../Pipeline_SSF_Weekly/2_Data/Input/merged_conus.shp', format='file')
-    , tar_target(newdat, getnewdat(washdat.preds, pig.range))
-    , tar_target(combo, olddat[newdat, on=.(huc12=huc12_new)])
-    , tar_target(lndvar, c('lc','tc','rd','mast','rgd','prcp','tmax','tmin','drt','dayl', 'weekly_displacement_shape', 'weekly_displacement_rate'))
-    # if they are coming out the same, should follow roughly a 1:1 relationship on the same scale on these plots
-    # some things will be different because of the different ways I did data extraction from rasters and vectors (area-weighted zonal statistics vs. point extractions)
-    , tar_target(compare.plots, plot.newold(combo, newdat, olddat, lndvar), pattern=map(lndvar))
+#     , tar_target(oldpreds, readRDS('../Pipeline_R3/watershed_weekly.rds'))
+# #     , tar_target(oldpreds, readRDS('../Pipeline_R3/watershed_minimum_weekly.rds'))
+#     , tar_target(olddat, getolddat(oldpreds))
+#     , tar_target(pig.range, '../Pipeline_SSF_Weekly/2_Data/Input/merged_conus.shp', format='file')
+#     , tar_target(newdat, getnewdat(washdat.preds, pig.range))
+#     , tar_target(combo, olddat[newdat, on=.(huc12=huc12_new)])
+#     , tar_target(lndvar, c('lc','tc','rd','mast','rgd','prcp','tmax','tmin','drt','dayl', 'weekly_displacement_shape', 'weekly_displacement_rate'))
+#     # if they are coming out the same, should follow roughly a 1:1 relationship on the same scale on these plots
+#     # some things will be different because of the different ways I did data extraction from rasters and vectors (area-weighted zonal statistics vs. point extractions)
+#     , tar_target(compare.plots, plot.newold(combo, newdat, olddat, lndvar), pattern=map(lndvar))
 
 ) # end targets list
 
